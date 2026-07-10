@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Circle Painter · Smart Blocks & Levels</title>
+  <title>Circle Painter · Dynamic Blocks & Levels</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -232,7 +232,7 @@
   </div>
   <div class="blocks-panel" id="blocksPanel"></div>
   <div class="controls">
-    <span id="infoText">🎯 Paint circles to match (unlimited blocks)</span>
+    <span id="infoText">🎯 Paint circles to match (max 5 blocks, instant refill)</span>
     <button class="reset-btn" id="resetButton">↺ Restart</button>
   </div>
   <div class="message" id="winMessage"></div>
@@ -252,9 +252,9 @@
     // ----- GAME CONFIG -----
     const DEFAULT_RANDOM_ROWS = 5;
     const DEFAULT_RANDOM_COLS = 5;
-    const DEFAULT_RANDOM_PALETTE = ['#e74c3c', '#2ecc71', '#3498db']; // red, green, blue
-    const INITIAL_BLOCK_COUNT = 8;
-    const TOTAL_TIME = 300; // 5 minutes
+    const DEFAULT_RANDOM_PALETTE = ['#e74c3c', '#2ecc71', '#3498db'];
+    const MAX_BLOCKS = 5;
+    const TOTAL_TIME = 300;
 
     // ----- STATE -----
     let gameRows = DEFAULT_RANDOM_ROWS;
@@ -268,11 +268,10 @@
     let isAnimating = false;
     let timeLeft = TOTAL_TIME;
     let timerInterval = null;
-    let cellElements = []; // 2D array of circle DOM elements
-    let currentMode = 'random'; // 'random' or 'level'
-    let currentLevelIndex = 0; // active level when in 'level' mode
+    let cellElements = [];
+    let currentMode = 'random';
+    let currentLevelIndex = 0;
 
-    // DOM elements
     const gridContainer = document.getElementById('gridContainer');
     const blocksPanel = document.getElementById('blocksPanel');
     const winMessage = document.getElementById('winMessage');
@@ -363,7 +362,6 @@
         randomModeBtn.classList.remove('active');
         levelsModeBtn.classList.add('active');
         levelSelector.style.display = 'flex';
-        // default to level 1 if not already set
         if (!levels[currentLevelIndex]) currentLevelIndex = 0;
         applyLevel(currentLevelIndex);
       }
@@ -373,7 +371,6 @@
     function setLevel(index) {
       currentLevelIndex = index;
       applyLevel(index);
-      // highlight active level button
       document.querySelectorAll('.level-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
       });
@@ -402,9 +399,8 @@
       }
     }
 
-    // Smart block generation: ensures all currently needed colors are present
-    function generateBlocks() {
-      // Determine needed colors (colors where any cell doesn't match)
+    // Generate a single block that is needed
+    function generateSingleBlock() {
       const neededSet = new Set();
       for (let r = 0; r < gameRows; r++) {
         for (let c = 0; c < gameCols; c++) {
@@ -414,27 +410,16 @@
         }
       }
       const neededColors = Array.from(neededSet);
-      // Fallback to current palette if nothing needed (shouldn't happen during play)
       const colorPool = neededColors.length > 0 ? neededColors : currentPalette;
+      const color = colorPool[Math.floor(Math.random() * colorPool.length)];
+      const directions = ['up', 'down', 'left', 'right'];
+      const direction = directions[Math.floor(Math.random() * directions.length)];
+      return { color, direction };
+    }
 
-      blocksRemaining = [];
-      // First, guarantee each needed color appears at least once
-      for (let color of neededColors) {
-        const directions = ['up', 'down', 'left', 'right'];
-        const direction = directions[Math.floor(Math.random() * directions.length)];
-        blocksRemaining.push({ color, direction });
-      }
-      // Fill remaining slots with random colors from the needed pool
-      while (blocksRemaining.length < INITIAL_BLOCK_COUNT) {
-        const color = colorPool[Math.floor(Math.random() * colorPool.length)];
-        const directions = ['up', 'down', 'left', 'right'];
-        const direction = directions[Math.floor(Math.random() * directions.length)];
-        blocksRemaining.push({ color, direction });
-      }
-      // Shuffle the array so the guaranteed ones aren't always at the beginning
-      for (let i = blocksRemaining.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [blocksRemaining[i], blocksRemaining[j]] = [blocksRemaining[j], blocksRemaining[i]];
+    function fillBlocksToMax() {
+      while (blocksRemaining.length < MAX_BLOCKS) {
+        blocksRemaining.push(generateSingleBlock());
       }
     }
 
@@ -494,7 +479,6 @@
     }
 
     function refreshUI() {
-      // Sync circle colors
       for (let r = 0; r < gameRows; r++) {
         for (let c = 0; c < gameCols; c++) {
           if (cellElements[r] && cellElements[r][c]) {
@@ -639,9 +623,9 @@
       animatePaint(sequence, color, () => {
         // Remove used block
         blocksRemaining.splice(blockIdx, 1);
-        // Refill if empty and game still active
-        if (blocksRemaining.length === 0 && !puzzleComplete && !gameLost) {
-          generateBlocks(); // smart generation based on current needs
+        // Immediately generate a new block to maintain max 5
+        if (!puzzleComplete && !gameLost) {
+          fillBlocksToMax();
         }
         refreshUI();
       });
@@ -655,17 +639,17 @@
       isAnimating = false;
       winMessage.textContent = '';
       generateRandomGrid();
-      generateBlocks(); // uses current circleColors (all black) -> needed = all colors in grid
+      blocksRemaining = [];
+      fillBlocksToMax(); // start with 5 blocks
       buildGridUI();
       buildBlocksUI();
       enableBlocksIfActive();
       startTimer();
     }
 
-    // ----- INITIAL SETUP & EVENT LISTENERS -----
+    // ----- INITIAL SETUP -----
     function init() {
       buildLevelButtons();
-      // default random mode active
       setMode('random');
 
       randomModeBtn.addEventListener('click', () => setMode('random'));
