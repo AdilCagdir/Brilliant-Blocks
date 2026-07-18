@@ -2,666 +2,618 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Circle Painter · Dynamic Blocks & Levels</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Diamond Drive · 3 Levels (Fixed Freeze)</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #1a1e2b;
+      margin: 0;
+      overflow: hidden;
       font-family: 'Segoe UI', system-ui, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 15px;
     }
-    .game-wrapper {
-      width: 100%;
-      max-width: 600px;
-      background: #252a3a;
-      border-radius: 28px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-      padding: 20px 20px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .timer-row {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #0f111a;
-      border-radius: 30px;
-      padding: 8px 20px;
-      color: #fbc531;
-      font-weight: bold;
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      background: rgba(0,0,0,0.7);
+      padding: 12px 28px;
+      border-radius: 40px;
       font-size: 1.4rem;
-      letter-spacing: 1px;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
-    }
-    .mode-bar {
+      font-weight: bold;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      pointer-events: none;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
+      gap: 15px;
     }
-    .mode-btn {
-      background: #3d4a59;
-      border: none;
-      color: white;
-      font-weight: bold;
-      padding: 8px 18px;
-      border-radius: 25px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      letter-spacing: 0.5px;
-      transition: 0.2s;
-      box-shadow: 0 3px 0 #1e272e;
-    }
-    .mode-btn.active {
-      background: #fbc531;
-      color: #1e272e;
-      box-shadow: 0 3px 0 #b3931d;
-    }
-    .level-selector {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .level-btn {
-      background: #2c3e50;
-      border: 2px solid #4a627a;
-      color: #ddd;
-      font-weight: bold;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: 0.2s;
-    }
-    .level-btn.active {
-      background: #fbc531;
-      color: #1e272e;
-      border-color: #fbc531;
-      font-weight: bold;
-    }
-    .grid-container {
-      display: flex;
-      justify-content: center;
-    }
-    .grid {
-      display: grid;
-      gap: 6px;
-      background: #0f111a;
-      padding: 8px;
-      border-radius: 16px;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
-      width: fit-content;
-      margin: 0 auto;
-    }
-    .cell {
-      aspect-ratio: 1 / 1;
-      width: 60px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: #2c3e50;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-      transition: 0.1s;
-      position: relative;
-    }
-    .cell.drop-hover {
-      outline: 3px solid #fbc531;
-      outline-offset: 2px;
-      filter: brightness(1.15);
-    }
-    .circle {
-      width: 60%;
-      height: 60%;
-      border-radius: 50%;
-      background-color: #000;
-      box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.5);
-      transition: background-color 0.1s;
-    }
-    .blocks-panel {
-      background: #1e2330;
+    #progressBarContainer {
+      width: 150px;
+      height: 16px;
+      background: rgba(255,255,255,0.2);
       border-radius: 20px;
-      padding: 14px 14px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-      align-items: center;
-      min-height: 70px;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.5);
     }
-    .block {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: grab;
-      user-select: none;
-      background-color: #e74c3c;
-      box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 8px 15px rgba(0,0,0,0.4);
-      transition: transform 0.1s, filter 0.1s;
-      position: relative;
+    #progressBarFill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #f1c40f, #f39c12);
+      transition: width 0.2s;
     }
-    .block:active {
-      cursor: grabbing;
-      transform: scale(0.94);
-      filter: brightness(1.1);
-    }
-    .block.dragging {
-      opacity: 0.5;
-      transform: scale(0.9);
-    }
-    .block.disabled {
-      pointer-events: none;
-      opacity: 0.5;
-      filter: grayscale(0.6);
-    }
-    .arrow {
-      font-size: 26px;
-      font-weight: bold;
+    #levelDisplay {
+      position: absolute;
+      top: 20px;
+      right: 20px;
       color: white;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-      line-height: 1;
-      pointer-events: none;
+      background: rgba(0,0,0,0.7);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      backdrop-filter: blur(4px);
     }
-    .controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: #ccc;
-      font-weight: 600;
-      gap: 10px;
+    #instruction {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.8);
+      background: rgba(0,0,0,0.6);
+      padding: 8px 24px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      backdrop-filter: blur(4px);
     }
-    .reset-btn {
-      background: #e67e22;
-      border: none;
+    #messageOverlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85);
       color: white;
+      font-size: 2.5rem;
       font-weight: bold;
-      padding: 10px 22px;
-      border-radius: 30px;
-      font-size: 0.95rem;
-      cursor: pointer;
-      letter-spacing: 0.4px;
-      box-shadow: 0 4px 0 #b85e1a, 0 6px 12px rgba(0,0,0,0.4);
-      transition: 0.1s;
-    }
-    .reset-btn:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 #b85e1a, 0 4px 8px rgba(0,0,0,0.4);
-    }
-    .message {
-      color: #fbc531;
-      font-weight: bold;
-      font-size: 1.1rem;
+      padding: 25px 45px;
+      border-radius: 25px;
       text-align: center;
-      min-height: 22px;
+      backdrop-filter: blur(8px);
+      display: none;
+      z-index: 100;
+      border: 3px solid #f1c40f;
     }
-    @media (max-width: 480px) {
-      .cell { width: 45px; }
-      .block { width: 46px; height: 46px; }
-      .arrow { font-size: 20px; }
+    #restartBtn, #nextLevelBtn {
+      margin-top: 15px;
+      padding: 10px 30px;
+      font-size: 1.2rem;
+      background: #f1c40f;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #nextLevelBtn {
+      background: #2ecc71;
     }
   </style>
 </head>
 <body>
-<div class="game-wrapper">
-  <div class="timer-row">
-    <span>⏳ <span id="timerDisplay">05:00</span></span>
+  <div id="ui">
+    <span>💎 <span id="score">0</span></span>
+    <div id="progressBarContainer">
+      <div id="progressBarFill"></div>
+    </div>
+    <span id="powerIndicator" style="font-size:0.9rem; color:#aaa;">⚡</span>
+  </div>
+  <div id="levelDisplay">🏁 Level <span id="levelNum">1</span></div>
+  <div id="instruction">🖱️ Hold left mouse button + move to steer</div>
+  <div id="messageOverlay">
+    <span id="messageText"></span>
+    <br>
+    <button id="nextLevelBtn" style="display:none;">▶ Next Level</button>
+    <button id="restartBtn">↺ Play Again</button>
   </div>
 
-  <div class="mode-bar">
-    <button id="randomModeBtn" class="mode-btn active">🎲 Random</button>
-    <button id="levelsModeBtn" class="mode-btn">📋 Levels</button>
-    <div id="levelSelector" class="level-selector" style="display:none;"></div>
-  </div>
-
-  <div class="grid-container">
-    <div class="grid" id="gridContainer"></div>
-  </div>
-  <div class="blocks-panel" id="blocksPanel"></div>
-  <div class="controls">
-    <span id="infoText">🎯 Paint circles to match (max 5 blocks, instant refill)</span>
-    <button class="reset-btn" id="resetButton">↺ Restart</button>
-  </div>
-  <div class="message" id="winMessage"></div>
-</div>
-
-<script>
-  (function() {
-    // ----- LEVEL DEFINITIONS -----
-    const levels = [
-      { name: '1', rows: 4, cols: 4, colors: ['#e74c3c', '#3498db'] },
-      { name: '2', rows: 4, cols: 4, colors: ['#9b59b6', '#e67e22', '#2ecc71'] },
-      { name: '3', rows: 5, cols: 5, colors: ['#f1c40f', '#1abc9c'] },
-      { name: '4', rows: 5, cols: 5, colors: ['#e74c3c', '#3498db', '#2ecc71'] },
-      { name: '5', rows: 6, cols: 6, colors: ['#e74c3c', '#3498db', '#9b59b6', '#fd79a8'] }
-    ];
-
-    // ----- GAME CONFIG -----
-    const DEFAULT_RANDOM_ROWS = 5;
-    const DEFAULT_RANDOM_COLS = 5;
-    const DEFAULT_RANDOM_PALETTE = ['#e74c3c', '#2ecc71', '#3498db'];
-    const MAX_BLOCKS = 5;
-    const TOTAL_TIME = 300;
-
-    // ----- STATE -----
-    let gameRows = DEFAULT_RANDOM_ROWS;
-    let gameCols = DEFAULT_RANDOM_COLS;
-    let currentPalette = [...DEFAULT_RANDOM_PALETTE];
-    let gridColors = [];
-    let circleColors = [];
-    let blocksRemaining = [];
-    let puzzleComplete = false;
-    let gameLost = false;
-    let isAnimating = false;
-    let timeLeft = TOTAL_TIME;
-    let timerInterval = null;
-    let cellElements = [];
-    let currentMode = 'random';
-    let currentLevelIndex = 0;
-
-    const gridContainer = document.getElementById('gridContainer');
-    const blocksPanel = document.getElementById('blocksPanel');
-    const winMessage = document.getElementById('winMessage');
-    const timerDisplay = document.getElementById('timerDisplay');
-    const infoText = document.getElementById('infoText');
-    const randomModeBtn = document.getElementById('randomModeBtn');
-    const levelsModeBtn = document.getElementById('levelsModeBtn');
-    const levelSelector = document.getElementById('levelSelector');
-    const resetButton = document.getElementById('resetButton');
-
-    // ----- TIMER -----
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    function updateTimerDisplay() {
-      timerDisplay.textContent = formatTime(timeLeft);
-    }
-
-    function startTimer() {
-      if (timerInterval) clearInterval(timerInterval);
-      timeLeft = TOTAL_TIME;
-      updateTimerDisplay();
-      timerInterval = setInterval(() => {
-        if (puzzleComplete || gameLost || isAnimating) return;
-        timeLeft--;
-        updateTimerDisplay();
-        if (timeLeft <= 0) {
-          timeLeft = 0;
-          clearInterval(timerInterval);
-          loseGame();
-        }
-      }, 1000);
-    }
-
-    function stopTimer() {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
       }
     }
+  </script>
 
-    function loseGame() {
-      if (gameLost || puzzleComplete) return;
-      gameLost = true;
-      stopTimer();
-      isAnimating = false;
-      winMessage.textContent = '⏰ Time\'s up! You lost. Try again.';
-      disableAllBlocks();
+  <script type="module">
+    import * as THREE from 'three';
+
+    // ---------- SCENE ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    scene.fog = new THREE.Fog(0x1a1a2e, 30, 80);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 200);
+    camera.position.set(0, 12, 18);
+    camera.lookAt(0, 0.5, -5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+
+    // ---------- LIGHTS ----------
+    const ambient = new THREE.AmbientLight(0x404066);
+    scene.add(ambient);
+    const dirLight = new THREE.DirectionalLight(0xffeedd, 1.1);
+    dirLight.position.set(10, 25, 5);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 60;
+    dirLight.shadow.camera.left = -25;
+    dirLight.shadow.camera.right = 25;
+    dirLight.shadow.camera.top = 25;
+    dirLight.shadow.camera.bottom = -15;
+    scene.add(dirLight);
+
+    // ---------- ROAD (permanent) ----------
+    const roadLength = 30;
+    const roadWidth = 12;
+    const segmentCount = 5;
+    const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.8, metalness: 0.2 });
+    const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.5, emissive: new THREE.Color(0x221100) });
+
+    const permanentMovingParts = [];
+
+    for (let i = 0; i < segmentCount; i++) {
+      const segment = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, roadLength), roadMaterial);
+      segment.rotation.x = -Math.PI / 2;
+      segment.position.z = -i * roadLength;
+      segment.receiveShadow = true;
+      scene.add(segment);
+      permanentMovingParts.push(segment);
+
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.3, roadLength * 0.6), lineMaterial);
+      line.rotation.x = -Math.PI / 2;
+      line.position.y = 0.02;
+      line.position.z = segment.position.z;
+      line.receiveShadow = true;
+      scene.add(line);
+      permanentMovingParts.push(line);
     }
 
-    function disableAllBlocks() {
-      document.querySelectorAll('.block').forEach(b => b.classList.add('disabled'));
+    const barrierMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: new THREE.Color(0x330000), roughness: 0.4 });
+    for (let i = 0; i < segmentCount; i++) {
+      const leftBarrier = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, roadLength), barrierMat);
+      leftBarrier.position.set(-roadWidth/2 - 0.2, 0.2, -i * roadLength);
+      leftBarrier.castShadow = true;
+      leftBarrier.receiveShadow = true;
+      scene.add(leftBarrier);
+      permanentMovingParts.push(leftBarrier);
+      
+      const rightBarrier = leftBarrier.clone();
+      rightBarrier.position.x = roadWidth/2 + 0.2;
+      scene.add(rightBarrier);
+      permanentMovingParts.push(rightBarrier);
     }
 
-    function enableBlocksIfActive() {
-      if (!puzzleComplete && !gameLost && !isAnimating) {
-        document.querySelectorAll('.block').forEach(b => b.classList.remove('disabled'));
-      }
-    }
+    // ---------- CAR ----------
+    const car = new THREE.Group();
+    car.position.set(0, 0.45, 0);
 
-    // ----- MODE & LEVEL UI -----
-    function buildLevelButtons() {
-      levelSelector.innerHTML = '';
-      levels.forEach((level, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'level-btn';
-        btn.textContent = level.name;
-        btn.addEventListener('click', () => {
-          setLevel(idx);
-        });
-        levelSelector.appendChild(btn);
+    const bodyGeo = new THREE.BoxGeometry(1.8, 0.6, 3.5);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.2, metalness: 0.6 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.3;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    car.add(body);
+
+    const cabinGeo = new THREE.BoxGeometry(1.4, 0.4, 1.8);
+    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x3498db, roughness: 0.1, metalness: 0.3, emissive: new THREE.Color(0x001122) });
+    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+    cabin.position.set(0, 0.7, -0.3);
+    cabin.castShadow = true;
+    cabin.receiveShadow = true;
+    car.add(cabin);
+
+    function createWheel(posX, posZ) {
+      const wheelGroup = new THREE.Group();
+      const wheelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 24);
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
+      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.castShadow = true;
+      wheel.receiveShadow = true;
+      wheelGroup.add(wheel);
+      wheelGroup.position.set(posX, 0.35, posZ);
+      return wheelGroup;
+    }
+    car.add(createWheel(-1.1, 1.2));
+    car.add(createWheel(1.1, 1.2));
+    car.add(createWheel(-1.1, -1.2));
+    car.add(createWheel(1.1, -1.2));
+    scene.add(car);
+
+    // ---------- GAME STATE ----------
+    const carSpeed = 22;
+    const maxSteerX = roadWidth/2 - 1.2;
+    let targetCarX = 0;
+    let score = 0;
+    let particlesActive = false;
+    let gameActive = true;
+    let elapsedTime = 0;
+    let wallSpawned = false;
+    let wall = null;
+    let level = 1;
+    let invertedControls = false;
+
+    let diamonds = [];
+    let obstacles = [];
+    let balls = [];
+    let gates = [];
+    let spawnedObjects = []; // diamonds, obstacles, gates, wall (objects that scroll automatically)
+
+    const diamondGeo = new THREE.OctahedronGeometry(0.7);
+    const obstacleGeo = new THREE.BoxGeometry(1.0, 0.8, 1.0);
+    const ballGeo = new THREE.SphereGeometry(0.6, 16, 16);
+    const gateGeo = new THREE.BoxGeometry(6, 2, 0.3);
+
+    const scoreElement = document.getElementById('score');
+    const progressFill = document.getElementById('progressBarFill');
+    const powerIndicator = document.getElementById('powerIndicator');
+    const levelNum = document.getElementById('levelNum');
+    const messageOverlay = document.getElementById('messageOverlay');
+    const messageText = document.getElementById('messageText');
+    const restartBtn = document.getElementById('restartBtn');
+    const nextLevelBtn = document.getElementById('nextLevelBtn');
+
+    // ---------- MAGIC PARTICLES ----------
+    const particleGroup = new THREE.Group();
+    scene.add(particleGroup);
+    for (let i = 0; i < 20; i++) {
+      const geom = new THREE.SphereGeometry(0.12, 4, 4);
+      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(`hsl(${i * 18}, 100%, 70%)`) });
+      const particle = new THREE.Mesh(geom, mat);
+      particle.position.set((Math.random() - 0.5) * 2.5, Math.random() * 2.5, (Math.random() - 0.5) * 2.5);
+      particleGroup.add(particle);
+    }
+    particleGroup.visible = false;
+
+    function updateParticles() {
+      if (!particlesActive) return;
+      particleGroup.position.copy(car.position);
+      particleGroup.children.forEach((p, i) => {
+        const angle = Date.now() * 0.005 + i * 0.5;
+        p.position.x = Math.sin(angle) * 1.8;
+        p.position.z = Math.cos(angle) * 1.8;
+        p.position.y = 0.8 + Math.sin(angle * 2) * 0.5;
       });
     }
 
-    function setMode(mode) {
-      currentMode = mode;
-      if (mode === 'random') {
-        randomModeBtn.classList.add('active');
-        levelsModeBtn.classList.remove('active');
-        levelSelector.style.display = 'none';
-        gameRows = DEFAULT_RANDOM_ROWS;
-        gameCols = DEFAULT_RANDOM_COLS;
-        currentPalette = [...DEFAULT_RANDOM_PALETTE];
-      } else {
-        randomModeBtn.classList.remove('active');
-        levelsModeBtn.classList.add('active');
-        levelSelector.style.display = 'flex';
-        if (!levels[currentLevelIndex]) currentLevelIndex = 0;
-        applyLevel(currentLevelIndex);
+    function activatePower() {
+      particlesActive = true;
+      particleGroup.visible = true;
+      powerIndicator.textContent = '✨ POWER!';
+      powerIndicator.style.color = '#f1c40f';
+    }
+
+    function deactivatePower() {
+      particlesActive = false;
+      particleGroup.visible = false;
+      powerIndicator.textContent = '⚡';
+      powerIndicator.style.color = '#aaa';
+    }
+
+    function updateProgressBar() {
+      const percent = Math.min((score / 15) * 100, 100);
+      progressFill.style.width = percent + '%';
+      if (score >= 15 && !particlesActive) activatePower();
+    }
+
+    // ---------- SPAWN HELPERS ----------
+    function getRandomSpreadZ() {
+      return -15 - Math.random() * 75;
+    }
+
+    function spawnDiamond(zPosition = null) {
+      if (!zPosition) zPosition = getRandomSpreadZ();
+      const color = new THREE.Color(`hsl(${Math.random() * 360}, 80%, 60%)`);
+      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.1, metalness: 0.5, emissive: color.clone().multiplyScalar(0.4) });
+      const diamond = new THREE.Mesh(diamondGeo, mat);
+      diamond.position.set((Math.random() - 0.5) * (roadWidth - 2.5), 0.9, zPosition);
+      diamond.castShadow = true;
+      diamond.receiveShadow = true;
+      scene.add(diamond);
+      diamonds.push(diamond);
+      spawnedObjects.push(diamond);
+    }
+
+    function spawnObstacle(zPosition = null) {
+      if (!zPosition) zPosition = getRandomSpreadZ();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.4, metalness: 0.9 });
+      const obstacle = new THREE.Mesh(obstacleGeo, mat);
+      obstacle.position.set((Math.random() - 0.5) * (roadWidth - 2.5), 0.5, zPosition);
+      obstacle.castShadow = true;
+      obstacle.receiveShadow = true;
+      scene.add(obstacle);
+      obstacles.push(obstacle);
+      spawnedObjects.push(obstacle);
+    }
+
+    function spawnBall(zPosition = null) {
+      if (!zPosition) zPosition = getRandomSpreadZ();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.2, metalness: 0.3 });
+      const ball = new THREE.Mesh(ballGeo, mat);
+      ball.position.set((Math.random() - 0.5) * (roadWidth - 2), 0.6, zPosition);
+      ball.castShadow = true;
+      ball.receiveShadow = true;
+      scene.add(ball);
+      balls.push({ mesh: ball, velocity: new THREE.Vector3(0, 0, 0) });
+    }
+
+    function spawnGate(zPosition = null) {
+      if (!zPosition) zPosition = getRandomSpreadZ();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x9b59b6, emissive: new THREE.Color(0x220022), roughness: 0.4 });
+      const gate = new THREE.Mesh(gateGeo, mat);
+      gate.position.set(0, 1.2, zPosition);
+      gate.castShadow = true;
+      gate.receiveShadow = true;
+      scene.add(gate);
+      gates.push({ mesh: gate, triggered: false });
+      spawnedObjects.push(gate);
+    }
+
+    function populateInitialObjects() {
+      for (let i = 0; i < 8; i++) {
+        const z = -5 - i * 10;
+        if (Math.random() < 0.7) spawnDiamond(z);
+        else spawnObstacle(z);
       }
-      resetGame();
-    }
-
-    function setLevel(index) {
-      currentLevelIndex = index;
-      applyLevel(index);
-      document.querySelectorAll('.level-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-      });
-      resetGame();
-    }
-
-    function applyLevel(index) {
-      const level = levels[index];
-      gameRows = level.rows;
-      gameCols = level.cols;
-      currentPalette = [...level.colors];
-    }
-
-    // ----- GAME LOGIC -----
-    function generateRandomGrid() {
-      gridColors = [];
-      circleColors = [];
-      for (let r = 0; r < gameRows; r++) {
-        gridColors[r] = [];
-        circleColors[r] = [];
-        for (let c = 0; c < gameCols; c++) {
-          const color = currentPalette[Math.floor(Math.random() * currentPalette.length)];
-          gridColors[r][c] = color;
-          circleColors[r][c] = '#000000';
-        }
+      if (level >= 2) {
+        for (let i = 0; i < 3; i++) spawnBall(-10 - i * 15);
       }
-    }
-
-    // Generate a single block that is needed
-    function generateSingleBlock() {
-      const neededSet = new Set();
-      for (let r = 0; r < gameRows; r++) {
-        for (let c = 0; c < gameCols; c++) {
-          if (circleColors[r][c] !== gridColors[r][c]) {
-            neededSet.add(gridColors[r][c]);
-          }
-        }
-      }
-      const neededColors = Array.from(neededSet);
-      const colorPool = neededColors.length > 0 ? neededColors : currentPalette;
-      const color = colorPool[Math.floor(Math.random() * colorPool.length)];
-      const directions = ['up', 'down', 'left', 'right'];
-      const direction = directions[Math.floor(Math.random() * directions.length)];
-      return { color, direction };
-    }
-
-    function fillBlocksToMax() {
-      while (blocksRemaining.length < MAX_BLOCKS) {
-        blocksRemaining.push(generateSingleBlock());
-      }
-    }
-
-    function buildGridUI() {
-      gridContainer.innerHTML = '';
-      gridContainer.style.gridTemplateColumns = `repeat(${gameCols}, 1fr)`;
-      cellElements = [];
-      for (let r = 0; r < gameRows; r++) {
-        cellElements[r] = [];
-        for (let c = 0; c < gameCols; c++) {
-          const cell = document.createElement('div');
-          cell.className = 'cell';
-          cell.style.backgroundColor = gridColors[r][c];
-          cell.dataset.row = r;
-          cell.dataset.col = c;
-          cell.setAttribute('draggable', 'false');
-
-          const circle = document.createElement('div');
-          circle.className = 'circle';
-          circle.style.backgroundColor = circleColors[r][c];
-          cell.appendChild(circle);
-          cellElements[r][c] = circle;
-
-          cell.addEventListener('dragover', handleDragOver);
-          cell.addEventListener('dragenter', handleDragEnter);
-          cell.addEventListener('dragleave', handleDragLeave);
-          cell.addEventListener('drop', handleDrop);
-
-          gridContainer.appendChild(cell);
-        }
+      if (level >= 3) {
+        spawnGate(-20 - Math.random() * 40);
       }
     }
 
-    function buildBlocksUI() {
-      blocksPanel.innerHTML = '';
-      blocksRemaining.forEach((block, index) => {
-        const blockDiv = document.createElement('div');
-        blockDiv.className = 'block';
-        if (gameLost || puzzleComplete || isAnimating) blockDiv.classList.add('disabled');
-        blockDiv.style.backgroundColor = block.color;
-        blockDiv.dataset.color = block.color;
-        blockDiv.dataset.direction = block.direction;
-        blockDiv.dataset.index = index;
-        blockDiv.setAttribute('draggable', 'true');
-
-        const arrowSpan = document.createElement('span');
-        arrowSpan.className = 'arrow';
-        const arrowSymbols = { up: '↑', down: '↓', left: '←', right: '→' };
-        arrowSpan.textContent = arrowSymbols[block.direction] || '?';
-        blockDiv.appendChild(arrowSpan);
-
-        blockDiv.addEventListener('dragstart', handleDragStart);
-        blockDiv.addEventListener('dragend', handleDragEnd);
-
-        blocksPanel.appendChild(blockDiv);
-      });
+    function clearAllSpawnedObjects() {
+      [...diamonds, ...obstacles, ...balls.map(b => b.mesh), ...gates.map(g => g.mesh)].forEach(obj => scene.remove(obj));
+      if (wall) scene.remove(wall);
+      diamonds = [];
+      obstacles = [];
+      balls = [];
+      gates = [];
+      spawnedObjects = [];
+      wall = null;
+      wallSpawned = false;
     }
 
-    function refreshUI() {
-      for (let r = 0; r < gameRows; r++) {
-        for (let c = 0; c < gameCols; c++) {
-          if (cellElements[r] && cellElements[r][c]) {
-            cellElements[r][c].style.backgroundColor = circleColors[r][c];
-          }
-        }
-      }
-      buildBlocksUI();
-      checkWinCondition();
+    // ---------- END GAME / RESTART ----------
+    function endGame(message, won = false) {
+      if (!gameActive) return; // already ended
+      gameActive = false;
+      messageText.textContent = message;
+      messageOverlay.style.display = 'block';
+      nextLevelBtn.style.display = (won && level < 3) ? 'inline-block' : 'none';
     }
 
-    function checkWinCondition() {
-      if (puzzleComplete || gameLost) return;
-      let allMatch = true;
-      for (let r = 0; r < gameRows; r++) {
-        for (let c = 0; c < gameCols; c++) {
-          if (circleColors[r][c] !== gridColors[r][c]) {
-            allMatch = false;
-            break;
-          }
-        }
-        if (!allMatch) break;
-      }
-      if (allMatch) {
-        puzzleComplete = true;
-        stopTimer();
-        winMessage.textContent = '✨ Perfect! All circles match! ✨';
-        disableAllBlocks();
-      }
+    function nextLevel() {
+      level++;
+      if (level > 3) level = 3;
+      resetLevel();
     }
 
-    function getPaintSequence(startRow, startCol, direction) {
-      const sequence = [{ r: startRow, c: startCol }];
-      let dr = 0, dc = 0;
-      switch (direction) {
-        case 'up': dr = -1; break;
-        case 'down': dr = 1; break;
-        case 'left': dc = -1; break;
-        case 'right': dc = 1; break;
-      }
-      let r = startRow + dr;
-      let c = startCol + dc;
-      while (r >= 0 && r < gameRows && c >= 0 && c < gameCols) {
-        sequence.push({ r, c });
-        r += dr;
-        c += dc;
-      }
-      return sequence;
+    function resetLevel() {
+      clearAllSpawnedObjects();
+      score = 0;
+      particlesActive = false;
+      gameActive = true;
+      elapsedTime = 0;
+      targetCarX = 0;
+      car.position.x = 0;
+      invertedControls = false;
+      deactivatePower();
+      updateProgressBar();
+      scoreElement.textContent = '0';
+      levelNum.textContent = level;
+      messageOverlay.style.display = 'none';
+      populateInitialObjects();
     }
 
-    function animatePaint(sequence, color, callback) {
-      if (sequence.length === 0) {
-        callback();
-        return;
-      }
-      let index = 0;
-      isAnimating = true;
-      disableAllBlocks();
+    restartBtn.addEventListener('click', resetLevel);
+    nextLevelBtn.addEventListener('click', nextLevel);
 
-      function paintNext() {
-        if (gameLost || puzzleComplete) {
-          isAnimating = false;
-          enableBlocksIfActive();
-          return;
-        }
-        if (index >= sequence.length) {
-          isAnimating = false;
-          enableBlocksIfActive();
-          callback();
-          return;
-        }
-        const { r, c } = sequence[index];
-        circleColors[r][c] = color;
-        if (cellElements[r] && cellElements[r][c]) {
-          cellElements[r][c].style.backgroundColor = color;
-        }
-        index++;
-        setTimeout(paintNext, 100);
-      }
+    // ---------- MOUSE / TOUCH ----------
+    let isMouseDown = false;
+    let lastMouseX = 0;
+    const steerSensitivity = 0.015;
 
-      paintNext();
-    }
-
-    // ----- DRAG & DROP -----
-    function handleDragStart(e) {
-      if (puzzleComplete || gameLost || isAnimating) {
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && gameActive) {
+        isMouseDown = true;
+        lastMouseX = e.clientX;
         e.preventDefault();
-        return false;
       }
-      e.dataTransfer.setData('text/plain', JSON.stringify({
-        color: this.dataset.color,
-        direction: this.dataset.direction,
-        index: this.dataset.index
-      }));
-      e.dataTransfer.effectAllowed = 'move';
-      this.classList.add('dragging');
-    }
-
-    function handleDragEnd(e) {
-      this.classList.remove('dragging');
-    }
-
-    function handleDragOver(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    }
-
-    function handleDragEnter(e) {
-      e.preventDefault();
-      this.classList.add('drop-hover');
-    }
-
-    function handleDragLeave(e) {
-      this.classList.remove('drop-hover');
-    }
-
-    function handleDrop(e) {
-      e.preventDefault();
-      this.classList.remove('drop-hover');
-      if (puzzleComplete || gameLost || isAnimating) return;
-
-      const cell = this;
-      const row = parseInt(cell.dataset.row);
-      const col = parseInt(cell.dataset.col);
-      
-      const rawData = e.dataTransfer.getData('text/plain');
-      if (!rawData) return;
-      let blockData;
-      try {
-        blockData = JSON.parse(rawData);
-      } catch (err) {
-        return;
+    });
+    window.addEventListener('mouseup', () => { isMouseDown = false; });
+    window.addEventListener('mousemove', (e) => {
+      if (isMouseDown && gameActive) {
+        let deltaX = e.clientX - lastMouseX;
+        if (invertedControls) deltaX *= -1;
+        targetCarX += deltaX * steerSensitivity;
+        targetCarX = Math.max(-maxSteerX, Math.min(maxSteerX, targetCarX));
+        lastMouseX = e.clientX;
       }
-      const { color, direction, index } = blockData;
-      const blockIdx = parseInt(index);
-      if (isNaN(blockIdx) || blockIdx >= blocksRemaining.length) return;
-      const block = blocksRemaining[blockIdx];
-      if (block.color !== color || block.direction !== direction) return;
+    });
+    renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 
-      const sequence = getPaintSequence(row, col, direction);
-      
-      animatePaint(sequence, color, () => {
-        // Remove used block
-        blocksRemaining.splice(blockIdx, 1);
-        // Immediately generate a new block to maintain max 5
-        if (!puzzleComplete && !gameLost) {
-          fillBlocksToMax();
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1 && gameActive) {
+        isMouseDown = true;
+        lastMouseX = e.touches[0].clientX;
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('touchend', () => { isMouseDown = false; });
+    window.addEventListener('touchmove', (e) => {
+      if (isMouseDown && e.touches.length === 1 && gameActive) {
+        let deltaX = e.touches[0].clientX - lastMouseX;
+        if (invertedControls) deltaX *= -1;
+        targetCarX += deltaX * steerSensitivity;
+        targetCarX = Math.max(-maxSteerX, Math.min(maxSteerX, targetCarX));
+        lastMouseX = e.touches[0].clientX;
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // ---------- ANIMATION LOOP (no early exits) ----------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      const delta = Math.min(clock.getDelta(), 0.1);
+
+      if (gameActive) {
+        elapsedTime += delta;
+
+        car.position.x += (targetCarX - car.position.x) * Math.min(delta * 8, 1);
+
+        // Move permanent road parts
+        permanentMovingParts.forEach(obj => {
+          obj.position.z += carSpeed * delta;
+          if (obj.position.z > roadLength * 0.8) obj.position.z -= segmentCount * roadLength;
+        });
+
+        // Move spawned objects (diamonds, obstacles, gates, wall)
+        spawnedObjects.forEach(obj => {
+          obj.position.z += carSpeed * delta;
+          if (obj.position.z > roadLength * 0.8) obj.position.z -= segmentCount * roadLength;
+        });
+
+        // Balls (manual movement)
+        for (let i = balls.length - 1; i >= 0; i--) {
+          const ballObj = balls[i];
+          const b = ballObj.mesh;
+          b.position.z += carSpeed * delta;
+          b.position.x += ballObj.velocity.x * delta;
+          b.position.z += ballObj.velocity.z * delta;
+
+          if (b.position.x < -maxSteerX + 0.5) { b.position.x = -maxSteerX + 0.5; ballObj.velocity.x *= -0.7; }
+          else if (b.position.x > maxSteerX - 0.5) { b.position.x = maxSteerX - 0.5; ballObj.velocity.x *= -0.7; }
+
+          if (b.position.z > 15) {
+            scene.remove(b);
+            balls.splice(i, 1);
+            continue;
+          }
+
+          if (car.position.distanceTo(b.position) < 2.2) {
+            const dir = new THREE.Vector3().subVectors(b.position, car.position).normalize();
+            ballObj.velocity.copy(dir.multiplyScalar(8));
+          }
+
+          for (let j = diamonds.length - 1; j >= 0; j--) {
+            const dia = diamonds[j];
+            if (b.position.distanceTo(dia.position) < 1.5) {
+              scene.remove(dia);
+              diamonds.splice(j, 1);
+              spawnedObjects = spawnedObjects.filter(obj => obj !== dia);
+              score++;
+              scoreElement.textContent = score;
+              updateProgressBar();
+              scene.remove(b);
+              balls.splice(i, 1);
+              break;
+            }
+          }
         }
-        refreshUI();
-      });
+
+        // Diamond collection by car
+        for (let i = diamonds.length - 1; i >= 0; i--) {
+          const dia = diamonds[i];
+          if (car.position.distanceTo(dia.position) < 2.0) {
+            scene.remove(dia);
+            diamonds.splice(i, 1);
+            spawnedObjects = spawnedObjects.filter(obj => obj !== dia);
+            score++;
+            scoreElement.textContent = score;
+            updateProgressBar();
+          }
+        }
+
+        // Obstacle collision
+        for (let obs of obstacles) {
+          if (car.position.distanceTo(obs.position) < 1.8) {
+            endGame('💥 Crash! You hit a roadblock.');
+            break; // break loop, but continue animate
+          }
+        }
+
+        // Gates
+        if (level >= 3) {
+          gates.forEach(gateObj => {
+            const gate = gateObj.mesh;
+            if (!gateObj.triggered && Math.abs(car.position.z - gate.position.z) < 1.5 && Math.abs(car.position.x - gate.position.x) < 3) {
+              invertedControls = !invertedControls;
+              gateObj.triggered = true;
+              gate.material.color.setHex(0xe67e22);
+            }
+          });
+        }
+
+        // Wall spawn at 15s
+        if (elapsedTime >= 15 && !wallSpawned) {
+          wallSpawned = true;
+          const wallGeo = new THREE.BoxGeometry(roadWidth, 2.5, 1.5);
+          const wallMat = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.6, metalness: 0.8 });
+          wall = new THREE.Mesh(wallGeo, wallMat);
+          wall.position.set(0, 1.25, - (segmentCount * roadLength) - 10);
+          wall.castShadow = true;
+          wall.receiveShadow = true;
+          scene.add(wall);
+          spawnedObjects.push(wall);
+        }
+
+        // Wall collision
+        if (wall && car.position.distanceTo(wall.position) < 3.5) {
+          if (particlesActive) endGame('🏆 Victory!', true);
+          else endGame('🧱 You crashed into the wall. Collect 15 diamonds first!');
+          // no return, just keep running (gameActive now false)
+        }
+
+        // Maintain object counts after 2s
+        if (elapsedTime > 2) {
+          while (diamonds.length < 10) spawnDiamond();
+          while (obstacles.length < 5) spawnObstacle();
+          if (level >= 2 && balls.length < 4) spawnBall();
+          if (level >= 3 && gates.length < 2) spawnGate();
+        }
+
+        updateParticles();
+      }
+
+      // Camera always updates (even if game ended, we still render the scene)
+      const camX = car.position.x * 0.7;
+      camera.position.x += (camX - camera.position.x) * 0.1;
+      camera.position.z = car.position.z + 18;
+      camera.position.y = 11;
+      camera.lookAt(car.position.x, 0.8, car.position.z - 4);
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
     }
 
-    // ----- RESET -----
-    function resetGame() {
-      stopTimer();
-      puzzleComplete = false;
-      gameLost = false;
-      isAnimating = false;
-      winMessage.textContent = '';
-      generateRandomGrid();
-      blocksRemaining = [];
-      fillBlocksToMax(); // start with 5 blocks
-      buildGridUI();
-      buildBlocksUI();
-      enableBlocksIfActive();
-      startTimer();
-    }
+    // Start
+    resetLevel();
+    animate();
 
-    // ----- INITIAL SETUP -----
-    function init() {
-      buildLevelButtons();
-      setMode('random');
-
-      randomModeBtn.addEventListener('click', () => setMode('random'));
-      levelsModeBtn.addEventListener('click', () => setMode('level'));
-      resetButton.addEventListener('click', resetGame);
-
-      document.body.addEventListener('dragover', (e) => e.preventDefault());
-      document.body.addEventListener('drop', (e) => e.preventDefault());
-    }
-
-    init();
-  })();
-</script>
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>
